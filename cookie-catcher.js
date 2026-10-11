@@ -1,19 +1,23 @@
 /*
- * 通用 Cookie 抓取脚本 (按站点分类版)
- * 适用: Egern / Loon / Surge / Quantumult X
+ * 通用 Cookie 抓取脚本 (Egern 原生 API 版)
+ * 配合 cookie-catcher.yaml 原生模块使用
  * 类型: http-request (请求头拦截)
  * 匹配: ^https?://  (全匹配, 靠下方 SITES 过滤)
- * MITM: 模块里已配好各站的 API 域名, 开关模块即开关抓取
+ * MITM: 模块里已配好各站的 API 域名
+ *
+ * 开关: 模块设置页里的「抓取」拨动开关 (env_schema 渲染),
+ * 默认关闭。打开后刷 App 自动抓取, 抓完关闭开关即可,
+ * 不用再整个模块开开关关。
  *
  * 原理: MITM 解密 App 的 HTTPS 请求后, 脚本在请求发出去之前读到
- * 请求头里的 Cookie, 按站点分别写入 $persistentStore 持久化保存。
- * 抓完把模块关掉, 数据都留着, 在 BoxJs 里按站点查看复制。
+ * 请求头里的 Cookie, 按站点分别写入持久化存储。
+ * 数据在 BoxJs 里按站点分类查看复制。
  *
  * 只存"已登录"的 Cookie: 每个站点配了 loginKeys (登录态标记字段),
  * Cookie 里没有这些字段说明没登录, 直接跳过不存、不弹窗。
  *
  * 一站只抓一次: 某站点抓到过就不再覆盖, 避免重复抓取。
- * 想重抓 (换号/过期) 时, 去 BoxJs 里把该站点那一栏清空, 再开模块抓一次即可。
+ * 想重抓 (换号/过期) 时, 去 BoxJs 里把该站点那一栏清空, 再开开关抓一次即可。
  *
  * 加新站点: 下方 SITES 加一项 {id, name, hosts, loginKeys} + 模块 MITM
  * 里加它的 API 域名 + BoxJs 订阅里加对应分类。
@@ -32,50 +36,41 @@ const SITES = [
 
 const KEY_PREFIX = 'cookie_catcher_site_'; // 每个站点一条, 如 cookie_catcher_site_bilibili
 
-function read(key) {
-  try {
-    if (typeof $persistentStore !== 'undefined') return $persistentStore.read(key);
-    if (typeof $prefs !== 'undefined') return $prefs.valueForKey(key);
-  } catch (e) {}
-  return null;
+function log(ctx, msg) {
+  try { if (ctx && typeof ctx.log === 'function') ctx.log(msg); } catch (e) {}
 }
 
-function write(key, val) {
-  try {
-    // 注意参数顺序: 值在前, 键在后 ($persistentStore.write(value, key))
-    if (typeof $persistentStore !== 'undefined') return $persistentStore.write(val, key);
-    if (typeof $prefs !== 'undefined') return $prefs.setValueForKey(val, key);
-  } catch (e) {}
-  return false;
+function notify(ctx, title, body) {
+  try { ctx.notify({ title: title, body: body }); } catch (e) {}
 }
 
-function notify(title, subtitle, body) {
-  try {
-    if (typeof $notification !== 'undefined') { $notification.post(title, subtitle, body); return; }
-    if (typeof $notify !== 'undefined') { $notify(title, subtitle, body); return; }
-  } catch (e) {}
-}
-
+// 兼容两种 headers 形态: Headers 对象 (.get) / 普通对象
 function getHeader(headers, name) {
-  var want = name.toLowerCase();
-  var keys = Object.keys(headers);
-  for (var i = 0; i < keys.length; i++) {
-    if (keys[i].toLowerCase() === want) return headers[keys[i]];
-  }
+  try {
+    if (headers && typeof headers.get === 'function') {
+      const v = headers.get(name);
+      if (v) return v;
+    }
+  } catch (e) {}
+  try {
+    const want = String(name).toLowerCase();
+    const keys = Object.keys(headers || {});
+    for (let i = 0; i < keys.length; i++) {
+      if (String(keys[i]).toLowerCase() === want) return headers[keys[i]];
+    }
+  } catch (e) {}
   return '';
 }
 
 function getHostname(url) {
-  var m = (url || '').match(/^https?:\/\/([^\/:]+)/i);
+  const m = String(url || '').match(/^https?:\/\/([^/:]+)/i);
   return m ? m[1].toLowerCase() : '';
 }
 
 function findSite(host) {
-  for (var i = 0; i < SITES.length; i++) {
-    var s = SITES[i];
-    for (var j = 0; j < s.hosts.length; j++) {
-      var h = s.hosts[j];
-      if (host === h || host.slice(-h.length - 1) === '.' + h) return s;
+  for (const s of SITES) {
+    for (const h of s.hosts) {
+      if (host === h || host.endsWith('.' + h)) return s;
     }
   }
   return null;
@@ -83,61 +78,62 @@ function findSite(host) {
 
 // 解析 Cookie 字符串里的字段名 (按名精确匹配, 不用子串避免误判)
 function cookieNames(cookie) {
-  var names = [];
-  var pairs = (cookie || '').split(';');
-  for (var i = 0; i < pairs.length; i++) {
-    var p = pairs[i];
-    var idx = p.indexOf('=');
-    var n = (idx === -1 ? p : p.slice(0, idx)).replace(/^\s+|\s+$/g, '');
+  const names = [];
+  const pairs = String(cookie || '').split(';');
+  for (const p of pairs) {
+    const idx = p.indexOf('=');
+    const n = (idx === -1 ? p : p.slice(0, idx)).trim();
     if (n) names.push(n);
   }
   return names;
 }
 
 function isLoggedIn(cookie, site) {
-  var names = cookieNames(cookie);
-  for (var i = 0; i < site.loginKeys.length; i++) {
-    if (names.indexOf(site.loginKeys[i]) !== -1) return true;
-  }
-  return false;
+  const names = cookieNames(cookie);
+  return site.loginKeys.some(k => names.indexOf(k) !== -1);
 }
 
-function main() {
-  var host = getHostname(($request && $request.url) || '');
-  var site = host ? findSite(host) : null;
-  if (!site) { $done({}); return; }
+export default async function main(ctx) {
+  try {
+    // 总开关: 模块设置页里的「抓取」拨动开关, 默认关闭
+    const enabled = ctx && ctx.env && ctx.env.ENABLE_CAPTURE;
+    if (enabled !== 'true') return;
 
-  var cookie = getHeader(($request && $request.headers) || {}, 'cookie');
-  if (!cookie) { $done({}); return; }
+    const req = (ctx && ctx.request) || {};
+    const host = getHostname(req.url || '');
+    const site = host ? findSite(host) : null;
+    if (!site) return;
 
-  // 没登录的不存: 游客 Cookie 抓了也没用
-  if (!isLoggedIn(cookie, site)) {
-    console.log('[Cookie抓取] ' + site.name + ' 未登录，跳过');
-    $done({}); return;
+    const cookie = String(getHeader(req.headers, 'cookie') || '').trim();
+    if (!cookie) return;
+
+    // 没登录的不存: 游客 Cookie 抓了也没用
+    if (!isLoggedIn(cookie, site)) {
+      log(ctx, '[Cookie抓取] ' + site.name + ' 未登录，跳过');
+      return;
+    }
+
+    const storeKey = KEY_PREFIX + site.id;
+    let existed = null;
+    try { existed = ctx.storage.get(storeKey); } catch (e) {}
+    if (existed) {
+      log(ctx, '[Cookie抓取] ' + site.name + ' 已抓过，跳过');
+      return;
+    }
+
+    // 该站点第一次抓到: 存 + 弹窗
+    try { ctx.storage.set(storeKey, cookie); } catch (e) {}
+    let saved = null;
+    try { saved = ctx.storage.get(storeKey); } catch (e) {}
+    log(ctx, '[Cookie抓取] ' + site.name + ' (' + host + ') 写入' + (saved ? '成功' : '失败'));
+
+    if (!saved) {
+      notify(ctx, '🍪 保存失败', site.name + '：写入存储失败，请截图此通知反馈');
+    } else {
+      notify(ctx, '🍪 Cookie 已保存', site.name + '：已存入 BoxJs 对应分类，抓完记得关闭抓取开关');
+    }
+  } catch (e) {
+    log(ctx, '[Cookie抓取] 脚本异常: ' + ((e && e.message) || e));
+    notify(ctx, '🍪 脚本异常', String((e && e.message) || e).slice(0, 200));
   }
-
-  var storeKey = KEY_PREFIX + site.id;
-  if (read(storeKey)) {
-    console.log('[Cookie抓取] ' + site.name + ' 已抓过，跳过');
-    $done({}); return;
-  }
-
-  // 该站点第一次抓到: 存 + 弹窗
-  var ok = write(storeKey, cookie);
-  console.log('[Cookie抓取] ' + site.name + ' (' + host + ') 已保存, 写入' + (ok ? '成功' : '失败'));
-  if (!ok) {
-    notify('🍪 保存失败', site.name, '写入持久化存储失败，请截图此通知反馈');
-  } else {
-    notify('🍪 Cookie 已保存', site.name, '已存入 BoxJs 对应分类，抓完记得关掉本模块');
-  }
-  $done({});
-}
-
-// 顶层 try/catch: 任何运行时异常都弹窗, 避免"静悄悄啥也不发生"
-try {
-  main();
-} catch (e) {
-  try { console.log('[Cookie抓取] 脚本异常: ' + (e && e.message ? e.message : e)); } catch (e2) {}
-  notify('🍪 脚本异常', '请截图反馈', String((e && e.message ? e.message : e)).slice(0, 200));
-  try { $done({}); } catch (e3) {}
 }

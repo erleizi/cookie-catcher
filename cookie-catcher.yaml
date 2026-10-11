@@ -1,0 +1,36 @@
+name: "🍪 Cookie 抓取开关"
+description: "按需抓取四站登录 Cookie：哔哩哔哩 / 抖音 / 快手 / 斗鱼。打开「抓取」开关 → 刷 App → 收到通知 → 关闭开关。Cookie 按站点分类保存，在 BoxJs 里查看复制。"
+author: "白日梦"
+
+compat_arguments:
+  ENABLE_CAPTURE: "false"
+compat_arguments_desc: "ENABLE_CAPTURE: 抓取总开关，true 开 / false 关（也可在模块设置页直接拨动「抓取」开关）"
+
+env_schema:
+  ENABLE_CAPTURE:
+    name: 抓取
+    description: "默认关闭。开启后刷 App 自动抓取各站登录 Cookie，抓到后请关闭。"
+    default_value: "false"
+    options:
+      - "true"
+      - "false"
+
+mitm:
+  hostnames:
+    includes:
+      - "api.bilibili.com"
+      - "app.bilibili.com"
+      - "aweme.snssdk.com"
+      - "www.douyin.com"
+      - "api.kuaishouzt.com"
+      - "www.kuaishou.com"
+      - "www.douyu.com"
+      - "apiv2.douyu.com"
+
+scriptings:
+  - http_request:
+      name: "🍪 Cookie 抓取"
+      match: '^https?://'
+      script_url: "https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-catcher.js"
+      env:
+        ENABLE_CAPTURE: "{{{ENABLE_CAPTURE}}}"

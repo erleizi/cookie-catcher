@@ -12,6 +12,9 @@
  * 只存"已登录"的 Cookie: 每个站点配了 loginKeys (登录态标记字段),
  * Cookie 里没有这些字段说明没登录, 直接跳过不存、不弹窗。
  *
+ * 一站只抓一次: 某站点抓到过就不再覆盖, 避免重复抓取。
+ * 想重抓 (换号/过期) 时, 去 BoxJs 里把该站点那一栏清空, 再开模块抓一次即可。
+ *
  * 加新站点: 下方 SITES 加一项 {id, name, hosts, loginKeys} + 模块 MITM
  * 里加它的 API 域名 + BoxJs 订阅里加对应分类。
  */
@@ -26,9 +29,6 @@ const SITES = [
   { id: 'douyu',    name: '斗鱼',     hosts: ['douyu.com'],
     loginKeys: ['acf_uid', 'acf_auth'] },
 ];
-
-// 新站点首次抓到时弹窗; 同一站点重复抓到只静默更新 (避免通知轰炸)
-const NOTIFY_ON_NEW_SITE_ONLY = true;
 
 const KEY_PREFIX = 'cookie_catcher_site_'; // 每个站点一条, 如 cookie_catcher_site_bilibili
 
@@ -111,14 +111,14 @@ if (!isLoggedIn(cookie, site)) {
 }
 
 const storeKey = KEY_PREFIX + site.id;
-const old = read(storeKey);
-const isNew = !old;
-if (cookie === old) { $done({}); } // 没变化就不写
-
-write(storeKey, cookie);
-console.log('[Cookie抓取] ' + site.name + ' (' + host + ') 已更新');
-if (!NOTIFY_ON_NEW_SITE_ONLY || isNew) {
-  notify('🍪 Cookie 已保存', site.name, '已存入 BoxJs 对应分类，抓完记得关掉本模块');
+if (read(storeKey)) {
+  console.log('[Cookie抓取] ' + site.name + ' 已抓过，跳过');
+  $done({});
 }
+
+// 该站点第一次抓到: 存 + 弹窗
+write(storeKey, cookie);
+console.log('[Cookie抓取] ' + site.name + ' (' + host + ') 已保存');
+notify('🍪 Cookie 已保存', site.name, '已存入 BoxJs 对应分类，抓完记得关掉本模块');
 
 $done({});

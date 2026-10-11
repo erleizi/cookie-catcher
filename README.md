@@ -14,11 +14,14 @@
 1. **MITM** 解密目标 App/站点的 HTTPS，才能看到请求头。
 2. **http-request 脚本** 全匹配（`^https?://`），在 JS 里用 `SITES`
    名单过滤域名——MITM 里加了哪个域名、名单里有哪个，才抓哪个。
-3. 抓到的 Cookie 按站点分类存：`cookie_catcher_site_<站点id>`
+3. **只存已登录的 Cookie**：每站配了 `loginKeys` 登录标记
+   （B站 `SESSDATA`、抖音 `sessionid`、斗鱼 `acf_uid`、快手待验证），
+   没登录的游客请求直接跳过，不存也不弹窗。
+4. 抓到的 Cookie 按站点分类存：`cookie_catcher_site_<站点id>`
    （哔哩哔哩 / 抖音 / 快手 / 斗鱼），BoxJs 里每站一块，互不干扰。
    B站存的是完整 Cookie（里面含 SESSDATA，通用）。
-4. `$notification.post` 弹窗（新站点首次抓到才弹，避免轰炸），`$done()` 结束。
-5. 模块的启用/禁用就是开关，抓完关掉，数据保留。
+5. `$notification.post` 弹窗（新站点首次抓到才弹，避免轰炸），`$done()` 结束。
+6. 模块的启用/禁用就是开关，抓完关掉，数据保留。
 
 ## 加新网站
 

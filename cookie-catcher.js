@@ -9,14 +9,22 @@
  * 请求头里的 Cookie, 按站点分别写入 $persistentStore 持久化保存。
  * 抓完把模块关掉, 数据都留着, 在 BoxJs 里按站点查看复制。
  *
- * 加新站点: 下方 SITES 加一项 {id, name, hosts} + 模块 MITM 里加它的 API 域名。
+ * 只存"已登录"的 Cookie: 每个站点配了 loginKeys (登录态标记字段),
+ * Cookie 里没有这些字段说明没登录, 直接跳过不存、不弹窗。
+ *
+ * 加新站点: 下方 SITES 加一项 {id, name, hosts, loginKeys} + 模块 MITM
+ * 里加它的 API 域名 + BoxJs 订阅里加对应分类。
  */
 
 const SITES = [
-  { id: 'bilibili', name: '哔哩哔哩', hosts: ['bilibili.com'] },
-  { id: 'douyin',   name: '抖音',     hosts: ['snssdk.com', 'douyin.com'] },
-  { id: 'kuaishou',  name: '快手',     hosts: ['kuaishou.com', 'kuaishouzt.com'] },
-  { id: 'douyu',    name: '斗鱼',     hosts: ['douyu.com'] },
+  { id: 'bilibili', name: '哔哩哔哩', hosts: ['bilibili.com'],
+    loginKeys: ['SESSDATA', 'DedeUserID', 'bili_jct'] },
+  { id: 'douyin',   name: '抖音',     hosts: ['snssdk.com', 'douyin.com'],
+    loginKeys: ['sessionid', 'sessionid_ss', 'sid_guard'] },
+  { id: 'kuaishou',  name: '快手',     hosts: ['kuaishou.com', 'kuaishouzt.com'],
+    loginKeys: ['userId', 'kuaishou.api_st'] }, // 待实机验证: 登录后若抓不到, 换标记
+  { id: 'douyu',    name: '斗鱼',     hosts: ['douyu.com'],
+    loginKeys: ['acf_uid', 'acf_auth'] },
 ];
 
 // 新站点首次抓到时弹窗; 同一站点重复抓到只静默更新 (避免通知轰炸)
@@ -69,12 +77,38 @@ function findSite(host) {
   return null;
 }
 
+// 解析 Cookie 字符串里的字段名 (按名精确匹配, 不用子串避免误判)
+function cookieNames(cookie) {
+  const names = [];
+  const pairs = (cookie || '').split(';');
+  for (const p of pairs) {
+    const idx = p.indexOf('=');
+    const n = (idx === -1 ? p : p.slice(0, idx)).trim();
+    if (n) names.push(n);
+  }
+  return names;
+}
+
+function isLoggedIn(cookie, site) {
+  const names = cookieNames(cookie);
+  for (const k of site.loginKeys) {
+    if (names.indexOf(k) !== -1) return true;
+  }
+  return false;
+}
+
 const host = getHostname($request.url || '');
 const site = host ? findSite(host) : null;
 if (!site) { $done({}); }
 
 const cookie = getHeader($request.headers || {}, 'cookie');
 if (!cookie) { $done({}); }
+
+// 没登录的不存: 游客 Cookie 抓了也没用
+if (!isLoggedIn(cookie, site)) {
+  console.log('[Cookie抓取] ' + site.name + ' 未登录，跳过');
+  $done({});
+}
 
 const storeKey = KEY_PREFIX + site.id;
 const old = read(storeKey);

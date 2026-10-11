@@ -35,9 +35,8 @@
 ## 文件
 
 - `cookie-catcher.yaml` — Egern 原生模块（含开关、MITM、脚本引用）
-- `cookie-catcher.js` — 抓取脚本（Egern 原生 API：`export default main(ctx)`）
+- `cookie-catcher-v2.js` — 抓取脚本（Egern 原生 API：`export default main(ctx)`；用 v2 文件名避免 Egern 按 URL 缓存旧脚本）
 - `cookie-catcher.boxjs.json` — BoxJs 订阅（四个站点分类）
-- `cookie-catcher.sgmodule` — 旧版 Surge 兼容模块（已废弃，保留备用）
 
 ## 加新站点
 

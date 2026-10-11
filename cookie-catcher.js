@@ -57,22 +57,25 @@ function notify(title, subtitle, body) {
 }
 
 function getHeader(headers, name) {
-  const want = name.toLowerCase();
-  for (const k of Object.keys(headers)) {
-    if (k.toLowerCase() === want) return headers[k];
+  var want = name.toLowerCase();
+  var keys = Object.keys(headers);
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].toLowerCase() === want) return headers[keys[i]];
   }
   return '';
 }
 
 function getHostname(url) {
-  const m = (url || '').match(/^https?:\/\/([^\/:]+)/i);
+  var m = (url || '').match(/^https?:\/\/([^\/:]+)/i);
   return m ? m[1].toLowerCase() : '';
 }
 
 function findSite(host) {
-  for (const s of SITES) {
-    for (const h of s.hosts) {
-      if (host === h || host.endsWith('.' + h)) return s;
+  for (var i = 0; i < SITES.length; i++) {
+    var s = SITES[i];
+    for (var j = 0; j < s.hosts.length; j++) {
+      var h = s.hosts[j];
+      if (host === h || host.slice(-h.length - 1) === '.' + h) return s;
     }
   }
   return null;
@@ -80,46 +83,61 @@ function findSite(host) {
 
 // 解析 Cookie 字符串里的字段名 (按名精确匹配, 不用子串避免误判)
 function cookieNames(cookie) {
-  const names = [];
-  const pairs = (cookie || '').split(';');
-  for (const p of pairs) {
-    const idx = p.indexOf('=');
-    const n = (idx === -1 ? p : p.slice(0, idx)).trim();
+  var names = [];
+  var pairs = (cookie || '').split(';');
+  for (var i = 0; i < pairs.length; i++) {
+    var p = pairs[i];
+    var idx = p.indexOf('=');
+    var n = (idx === -1 ? p : p.slice(0, idx)).replace(/^\s+|\s+$/g, '');
     if (n) names.push(n);
   }
   return names;
 }
 
 function isLoggedIn(cookie, site) {
-  const names = cookieNames(cookie);
-  for (const k of site.loginKeys) {
-    if (names.indexOf(k) !== -1) return true;
+  var names = cookieNames(cookie);
+  for (var i = 0; i < site.loginKeys.length; i++) {
+    if (names.indexOf(site.loginKeys[i]) !== -1) return true;
   }
   return false;
 }
 
-const host = getHostname($request.url || '');
-const site = host ? findSite(host) : null;
-if (!site) { $done({}); return; }
+function main() {
+  var host = getHostname(($request && $request.url) || '');
+  var site = host ? findSite(host) : null;
+  if (!site) { $done({}); return; }
 
-const cookie = getHeader($request.headers || {}, 'cookie');
-if (!cookie) { $done({}); return; }
+  var cookie = getHeader(($request && $request.headers) || {}, 'cookie');
+  if (!cookie) { $done({}); return; }
 
-// 没登录的不存: 游客 Cookie 抓了也没用
-if (!isLoggedIn(cookie, site)) {
-  console.log('[Cookie抓取] ' + site.name + ' 未登录，跳过');
-  $done({}); return;
+  // 没登录的不存: 游客 Cookie 抓了也没用
+  if (!isLoggedIn(cookie, site)) {
+    console.log('[Cookie抓取] ' + site.name + ' 未登录，跳过');
+    $done({}); return;
+  }
+
+  var storeKey = KEY_PREFIX + site.id;
+  if (read(storeKey)) {
+    console.log('[Cookie抓取] ' + site.name + ' 已抓过，跳过');
+    $done({}); return;
+  }
+
+  // 该站点第一次抓到: 存 + 弹窗
+  var ok = write(storeKey, cookie);
+  console.log('[Cookie抓取] ' + site.name + ' (' + host + ') 已保存, 写入' + (ok ? '成功' : '失败'));
+  if (!ok) {
+    notify('🍪 保存失败', site.name, '写入持久化存储失败，请截图此通知反馈');
+  } else {
+    notify('🍪 Cookie 已保存', site.name, '已存入 BoxJs 对应分类，抓完记得关掉本模块');
+  }
+  $done({});
 }
 
-const storeKey = KEY_PREFIX + site.id;
-if (read(storeKey)) {
-  console.log('[Cookie抓取] ' + site.name + ' 已抓过，跳过');
-  $done({}); return;
+// 顶层 try/catch: 任何运行时异常都弹窗, 避免"静悄悄啥也不发生"
+try {
+  main();
+} catch (e) {
+  try { console.log('[Cookie抓取] 脚本异常: ' + (e && e.message ? e.message : e)); } catch (e2) {}
+  notify('🍪 脚本异常', '请截图反馈', String((e && e.message ? e.message : e)).slice(0, 200));
+  try { $done({}); } catch (e3) {}
 }
-
-// 该站点第一次抓到: 存 + 弹窗
-write(storeKey, cookie);
-console.log('[Cookie抓取] ' + site.name + ' (' + host + ') 已保存');
-notify('🍪 Cookie 已保存', site.name, '已存入 BoxJs 对应分类，抓完记得关掉本模块');
-
-$done({});

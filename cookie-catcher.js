@@ -42,8 +42,9 @@ function read(key) {
 
 function write(key, val) {
   try {
-    if (typeof $persistentStore !== 'undefined') return $persistentStore.write(key, val);
-    if (typeof $prefs !== 'undefined') return $prefs.setValueForKey(key, val);
+    // 注意参数顺序: 值在前, 键在后 ($persistentStore.write(value, key))
+    if (typeof $persistentStore !== 'undefined') return $persistentStore.write(val, key);
+    if (typeof $prefs !== 'undefined') return $prefs.setValueForKey(val, key);
   } catch (e) {}
   return false;
 }
@@ -99,21 +100,21 @@ function isLoggedIn(cookie, site) {
 
 const host = getHostname($request.url || '');
 const site = host ? findSite(host) : null;
-if (!site) { $done({}); }
+if (!site) { $done({}); return; }
 
 const cookie = getHeader($request.headers || {}, 'cookie');
-if (!cookie) { $done({}); }
+if (!cookie) { $done({}); return; }
 
 // 没登录的不存: 游客 Cookie 抓了也没用
 if (!isLoggedIn(cookie, site)) {
   console.log('[Cookie抓取] ' + site.name + ' 未登录，跳过');
-  $done({});
+  $done({}); return;
 }
 
 const storeKey = KEY_PREFIX + site.id;
 if (read(storeKey)) {
   console.log('[Cookie抓取] ' + site.name + ' 已抓过，跳过');
-  $done({});
+  $done({}); return;
 }
 
 // 该站点第一次抓到: 存 + 弹窗

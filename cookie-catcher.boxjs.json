@@ -1,1 +1,62 @@
-{"apps":[{"icons":["https://raw.githubusercontent.com/chavyleung/scripts/master/box/box.png","https://raw.githubusercontent.com/chavyleung/scripts/master/box/box.png"],"id":"cookie_catcher","keys":["cookie_catcher_site_bilibili","cookie_catcher_site_douyin","cookie_catcher_site_kuaishou","cookie_catcher_site_douyu"],"name":"Cookie 抓取","script":"https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-catcher.js","settings":[{"autoGrow":true,"desc":"抓取脚本自动写入，也可手动粘贴。B站 Cookie 通用，里面含 SESSDATA。","id":"cookie_catcher_site_bilibili","name":"哔哩哔哩","rows":3,"type":"textarea","val":""},{"autoGrow":true,"desc":"抓取脚本自动写入，也可手动粘贴。","id":"cookie_catcher_site_douyin","name":"抖音","rows":3,"type":"textarea","val":""},{"autoGrow":true,"desc":"抓取脚本自动写入，也可手动粘贴。","id":"cookie_catcher_site_kuaishou","name":"快手","rows":3,"type":"textarea","val":""},{"autoGrow":true,"desc":"抓取脚本自动写入，也可手动粘贴。","id":"cookie_catcher_site_douyu","name":"斗鱼","rows":3,"type":"textarea","val":""}]}],"author":"erleizi","desc":"按需抓取各 App 的 Cookie，按站点分类保存；抓完关闭模块即可，数据保留。","icon":"https://raw.githubusercontent.com/chavyleung/scripts/master/box/box.png","id":"cookie-catcher.sub","name":"Cookie 抓取","repo":"https://github.com/erleizi/cookie-catcher"}
+{
+  "apps": [
+    {
+      "icons": [
+        "https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-icon.png"
+      ],
+      "id": "cookie_catcher",
+      "keys": [
+        "cookie_catcher_site_bilibili",
+        "cookie_catcher_site_douyin",
+        "cookie_catcher_site_kuaishou",
+        "cookie_catcher_site_douyu"
+      ],
+      "name": "Cookie 抓取",
+      "script": "https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-catcher-v2.js",
+      "settings": [
+        {
+          "autoGrow": true,
+          "desc": "抓取脚本自动写入，也可手动粘贴。B站 Cookie 通用，里面含 SESSDATA。",
+          "id": "cookie_catcher_site_bilibili",
+          "name": "哔哩哔哩",
+          "rows": 3,
+          "type": "textarea",
+          "val": ""
+        },
+        {
+          "autoGrow": true,
+          "desc": "抓取脚本自动写入，也可手动粘贴。",
+          "id": "cookie_catcher_site_douyin",
+          "name": "抖音",
+          "rows": 3,
+          "type": "textarea",
+          "val": ""
+        },
+        {
+          "autoGrow": true,
+          "desc": "抓取脚本自动写入，也可手动粘贴。",
+          "id": "cookie_catcher_site_kuaishou",
+          "name": "快手",
+          "rows": 3,
+          "type": "textarea",
+          "val": ""
+        },
+        {
+          "autoGrow": true,
+          "desc": "抓取脚本自动写入，也可手动粘贴。",
+          "id": "cookie_catcher_site_douyu",
+          "name": "斗鱼",
+          "rows": 3,
+          "type": "textarea",
+          "val": ""
+        }
+      ]
+    }
+  ],
+  "author": "erleizi",
+  "desc": "按需抓取各 App 的 Cookie，按站点分类保存；抓完关闭模块即可，数据保留。",
+  "icon": "https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-icon.png",
+  "id": "cookie-catcher.sub",
+  "name": "Cookie 抓取",
+  "repo": "https://github.com/erleizi/cookie-catcher"
+}

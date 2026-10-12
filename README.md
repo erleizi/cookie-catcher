@@ -5,10 +5,12 @@
 
 ## 安装
 
+> 如果之前装过旧版（cookie-catcher.sgmodule 或 cookie-catcher-v2.yaml），**先删掉旧模块再装 v3**——Egern 会按 URL 缓存旧脚本，不删干净可能继续跑旧版。
+
 1. Egern → 模块 → 添加 → 从 URL 导入，填：
 
    ```
-   https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-catcher-v2.yaml
+   https://raw.githubusercontent.com/erleizi/cookie-catcher/main/cookie-catcher-v3.yaml
    ```
 
 2. BoxJs → 应用订阅 → 添加，填：
@@ -34,13 +36,13 @@
 
 ## 文件
 
-- `cookie-catcher-v2.yaml` — Egern 原生模块（含开关、MITM、脚本引用；用 v2 文件名避免 Egern 按 URL 缓存旧模块）
-- `cookie-catcher-v2.js` — 抓取脚本（Egern 原生 API：`export default main(ctx)`；用 v2 文件名避免 Egern 按 URL 缓存旧脚本）
+- `cookie-catcher-v3.yaml` — Egern 原生模块（含开关、MITM、脚本引用；文件名 v3，专治 Egern 按 URL 缓存旧模块）
+- `cookie-catcher-v2.js` — 抓取脚本（Egern 原生 API：`export default main(ctx)`；脚本沿用 v2 文件名，v3 只改了 yaml 文件名来破缓存）
 - `cookie-catcher.boxjs.json` — BoxJs 订阅（四个站点分类）
 - `cookie-icon.png` — 订阅图标
 
 ## 加新站点
 
 1. `cookie-catcher-v2.js` 的 `SITES` 加一项 `{id, name, hosts, loginKeys}`；
-2. `cookie-catcher-v2.yaml` 的 MITM 里加它的 API 域名；
+2. `cookie-catcher-v3.yaml` 的 MITM **和** `match` 里都加它的 API 域名（match 保持窄匹配，只 hook 必要的域名）；
 3. `cookie-catcher.boxjs.json` 里加对应分类（key 为 `cookie_catcher_site_<id>`）。

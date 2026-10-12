@@ -6,10 +6,6 @@ compat_arguments:
   ENABLE_CAPTURE: "false"
 compat_arguments_desc: "ENABLE_CAPTURE: 抓取总开关，true 开 / false 关（也可在模块设置页直接拨动「抓取」开关）"
 
-# 模块级环境变量：传给模块内所有脚本（Egern 官方写法），脚本里用 ctx.env.ENABLE_CAPTURE 读取
-env:
-  ENABLE_CAPTURE: "{{{ENABLE_CAPTURE}}}"
-
 env_schema:
   ENABLE_CAPTURE:
     name: 抓取
